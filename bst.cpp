@@ -1,7 +1,8 @@
 #include <iostream>
-#include <string>
 #include <time.h>
 #include <sstream>
+#include <string>
+
 
 template<typename T>
 class Bst {
@@ -24,9 +25,11 @@ public:
     ~Bst() {
         delete_all();
     }
-
-    int tmp_get_size() {
+    int get_size() {
         return size;
+    }
+    node* get_root() {
+        return root;
     }
 
     void add_node(const T& data) {
@@ -65,7 +68,7 @@ public:
 
         if (ptr) {
             if (ptr->data == data) {
-                //std::cout << ptr->data << std::endl; //testing purposes
+                //std::cout << ptr->data << std::endl; //do testow
                 return ptr;
             }
 
@@ -87,13 +90,12 @@ public:
         }
         node* n = find_node(data, root);
         //todo
-    
     }
 
     void preorder_traversal() { preorder_traversal(root); }
     void preorder_traversal(node* n) {
         if (n) {
-            std::cout << n->data << std::endl;
+            std::cout << n->data << std::endl; //do testow
             preorder_traversal(n->left);
             preorder_traversal(n->right);
             //todo display method
@@ -104,42 +106,76 @@ public:
     void inorder_traversal(node* n) {
         if (n) {
             inorder_traversal(n->left);
-            std::cout << n->data << std::endl;
+            std::cout << n->data << std::endl; //do testow
             inorder_traversal(n->right);
             //todo display method
         }
     }
 
-    void delete_all() { delete_all(root); }
     void delete_all(node* n) {
-        if (size == 0) {
-            return;
-        }
-        else {
-            if (n == nullptr) {
+            if (!n) {
                 return;
             }
             delete_all(n->left);
             delete_all(n->right);
-            //std::cout << "Deleting node: " << n->data << std::endl; //testing purposes
-
+            //std::cout << "Deleting node: " << n->data << std::endl; //do testow
             delete n;
-            size--;
+            size--;     
+    }
+
+    int get_height() { return get_height(root); }
+    int get_height(node* n) {
+        if (!n)
+            return 0;
+        else if (size == 1) {
+            return 1;
         }
-        
+        return 1 + std::max(get_height(n->left), get_height(n->right));
     }
 
-    int get_height() {
-        //todo
+    std::string tree_traversal_to_string(node* n) {
+        std::ostringstream output;
+        if (n) {
+            std::ostringstream p;
+            std::ostringstream r;
+            std::ostringstream l;
+            if (n->parent) {
+                p << (n->parent->data);
+            }
+            else {
+                p << "NULL";
+            }
+
+            if (n->left) {
+                l << n->left->data;
+            }
+            else {
+                l << "NULL";
+            }
+
+            if (n->right) {
+                r << n->right->data;
+            }
+            else {
+                r << "NULL";
+            }
+
+            output << "([parent: " << p.str() << ", left child: " << l.str() << ", right child: " << r.str() << "], data: " << n->data << ")," << std::endl;  
+            output << tree_traversal_to_string(n->left);
+            output << tree_traversal_to_string(n->right);
+            
+        }
+        return output.str();
     }
-
-    /*
-    string display_tree(unsigned int n = 0) { 
-        ostringstream output;
-
-        //todo
-
-    }*/
+    std::string display_tree() { 
+        std::ostringstream output;
+        output << "Ilosc elementow: " << size << std::endl;
+        //output << "Wysokosc drzewa: " << get_height() << std::endl;
+        if (size > 0 && size <= 20) {
+            output << tree_traversal_to_string(root);
+        }
+        return output.str();
+    }
 
 private:
     unsigned int size;
@@ -156,7 +192,7 @@ struct BstData {
 };
 
 std::ostream& operator << (std::ostream& out, const BstData& obj) {
-    out << "{d1: " << obj.d1 << std::endl << "d2: " << obj.d2 << "}";
+    out << "{d1: " << obj.d1 << ", d2: " << obj.d2 << "}";
     return out;
 }
 
@@ -174,9 +210,9 @@ bool operator ==(const BstData& a, const BstData& b) {
 
 int main()
 {
-    Bst<BstData>* bst = new  Bst<BstData>();
+    Bst<BstData>* bst = new Bst<BstData>();
     BstData data;
-    const int order = 3;
+    const int order = 6;
     const int n = pow(10, order);
 
     for (int i = 0; i < n; i++) {
@@ -184,11 +220,26 @@ int main()
         data.d2 = 'a' + rand() % 26;
         bst->add_node(data);
     }
-    std::cout << bst->tmp_get_size() << std::endl;
-    bst->delete_all();
-    std::cout << bst->tmp_get_size() << std::endl;
+    
+    /*data.d1 = 40;
+    data.d2 = 'a';
+    bst->add_node(data);
+    data.d1 = 30;
+    data.d2 = 'a';
+    bst->add_node(data);
+    data.d1 = 31;
+    data.d2 = 'a';
+    bst->add_node(data);
+    data.d1 = 29;
+    data.d2 = 'a';
+    bst->add_node(data);
+    data.d1 = 2;
+    data.d2 = 'a';
+    bst->add_node(data);*/
 
-
+    std::cout << bst->display_tree() << std::endl;
+    bst->delete_all(bst->get_root());
+    std::cout << bst->display_tree() << std::endl;
     delete bst;
     system("pause");
 }
