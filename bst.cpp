@@ -10,10 +10,12 @@ public:
     struct node {
         T data;
         node *left, *right, *parent;
+        int node_index;
         node() {
             left = nullptr;
             right = nullptr;
             parent = nullptr;
+            node_index = 0;
         }
     };
 
@@ -23,7 +25,7 @@ public:
     }
 
     ~Bst() {
-        delete_all();
+        delete_all(root);
     }
     int get_size() {
         return size;
@@ -35,6 +37,7 @@ public:
     void add_node(const T& data) {
         node* n = new node();
         n->data = data;
+        n->node_index = size;
         if (size == 0) {
             root = n;
         }
@@ -60,10 +63,7 @@ public:
         size++;
     }
 
-    node* find_node(const T& data) {
-       return find_node(data, root);
-    }
-
+    node* find_node(const T& data) { return find_node(data, root); }
     node* find_node(const T& data, node* ptr) {
 
         if (ptr) {
@@ -84,12 +84,65 @@ public:
         }
     }
 
-    void delete_node(const T& data) {
-        if (root == nullptr) {
-            return;
+    void delete_node(node* ptr) {
+        if (ptr) {
+            if (!ptr->right && !ptr->left) {
+                //case bez potomkow
+                if (ptr->data < ptr->parent->data) {
+                    ptr->parent->left = nullptr;
+                    delete ptr;
+                }
+                else {
+                    ptr->parent->right = nullptr;
+                    delete ptr;
+                }
+                size--;
+            }
+            else if (ptr->left && !ptr->right) {
+                //case tylko z lewym potomkiem
+                if (ptr->data < ptr->parent->data) {
+                    ptr->left->parent = ptr->parent;
+                    ptr->parent->left = ptr->left;
+                    delete ptr;
+                }
+                else {
+                    ptr->left->parent = ptr->parent;
+                    ptr->parent->right = ptr->left;
+                    delete ptr;
+                }
+                size--;
+
+            }
+            else if (ptr->right && !ptr->left) {
+                //case tylko z prawym potomkiem
+                if (ptr->data < ptr->parent->data) {
+                    ptr->right->parent = ptr->parent;
+                    ptr->parent->left = ptr->right;
+                    delete ptr;
+                }
+                else {
+                    ptr->right->parent = ptr->parent;
+                    ptr->parent->right = ptr->right;
+                    delete ptr;
+                }
+                size--;
+            }
+            else {
+                //case gdzie sa oba potomki
+                node* tmp = find_succesor(ptr->right);
+                ptr->data = tmp->data;
+                delete_node(tmp);
+            }
         }
-        node* n = find_node(data, root);
-        //todo
+    }
+
+    node* find_succesor(node* n) {
+        node* tmp = n;
+        while (tmp && tmp->left) {
+            tmp = tmp->left;
+        }
+
+        return tmp;
     }
 
     void preorder_traversal() { preorder_traversal(root); }
@@ -112,21 +165,24 @@ public:
         }
     }
 
+    void delete_all() { delete_all(root); }
     void delete_all(node* n) {
-            if (!n) {
-                return;
-            }
+        if (n == nullptr) {
+            return;
+        }
+        else {
             delete_all(n->left);
             delete_all(n->right);
-            //std::cout << "Deleting node: " << n->data << std::endl; //do testow
+            root = nullptr;
             delete n;
-            size--;     
+            size--;
+        }
     }
-
     int get_height() { return get_height(root); }
     int get_height(node* n) {
-        if (!n)
+        if (!n) {
             return 0;
+        }
         else if (size == 1) {
             return 1;
         }
@@ -160,7 +216,7 @@ public:
                 r << "NULL";
             }
 
-            output << "([parent: " << p.str() << ", left child: " << l.str() << ", right child: " << r.str() << "], data: " << n->data << ")," << std::endl;  
+            output << "(" << n->node_index << ": [parent: " << p.str() << ", left child: " << l.str() << ", right child: " << r.str() << "], data: " << n->data << ")," << std::endl;  
             output << tree_traversal_to_string(n->left);
             output << tree_traversal_to_string(n->right);
             
@@ -170,8 +226,8 @@ public:
     std::string display_tree() { 
         std::ostringstream output;
         output << "Ilosc elementow: " << size << std::endl;
-        //output << "Wysokosc drzewa: " << get_height() << std::endl;
-        if (size > 0 && size <= 20) {
+        output << "Wysokosc drzewa: " << get_height(root) << std::endl;
+        if (size <= 20) {
             output << tree_traversal_to_string(root);
         }
         return output.str();
@@ -212,34 +268,59 @@ int main()
 {
     Bst<BstData>* bst = new Bst<BstData>();
     BstData data;
-    const int order = 6;
-    const int n = pow(10, order);
-
-    for (int i = 0; i < n; i++) {
-        data.d1 = rand() % 100;
-        data.d2 = 'a' + rand() % 26;
-        bst->add_node(data);
-    }
     
-    /*data.d1 = 40;
-    data.d2 = 'a';
-    bst->add_node(data);
-    data.d1 = 30;
-    data.d2 = 'a';
-    bst->add_node(data);
-    data.d1 = 31;
-    data.d2 = 'a';
-    bst->add_node(data);
-    data.d1 = 29;
-    data.d2 = 'a';
-    bst->add_node(data);
-    data.d1 = 2;
-    data.d2 = 'a';
-    bst->add_node(data);*/
+    const int MAX_ORDER = 7;
+    srand(time(NULL));
 
-    std::cout << bst->display_tree() << std::endl;
-    bst->delete_all(bst->get_root());
-    std::cout << bst->display_tree() << std::endl;
+    for (int o = 1; o <= MAX_ORDER; o++) {
+        const int n = pow(10, o);
+
+        clock_t t1 = clock();
+        for (int i = 0; i < n; i++) {
+            data.d1 = rand() % 10000;
+            data.d2 = 'a' + rand() % 26;
+            bst->add_node(data);
+        }
+        clock_t t2 = clock();
+        std::cout << "=====================================================================" << std::endl;
+        std::cout << "                          " << o << " Test                           " << std::endl;
+        std::cout << "=====================================================================\n\n";
+
+        std::cout << bst->display_tree() << std::endl;
+        double time = (t2 - t1) / (double)CLOCKS_PER_SEC;
+        float wynik = bst->get_size() / bst->get_height();
+        float log_wynik = log2(bst->get_size());
+        std::cout << "---------------------------------------------------------------------\n\n";
+        std::cout << "Calkowity czas dodawania: " << time << std::endl;
+        std::cout << "Sredni czas dodawania: " << time / n << std::endl;
+        std::cout << "Stosunek wysokosci drzewa do rozmiaru danych: " << wynik << std::endl;
+        std::cout << "Logarytm z rozmiaru danych: " << log_wynik << std::endl;
+        std::cout << "Stosunek wysokosci drzewa do logarytmu z rozmiaru danych: " << bst->get_height() / log_wynik << "\n\n";
+        std::cout << "---------------------------------------------------------------------\n\n";
+        const int m = pow(10, 4);
+        int hits = 0;
+        t1 = clock();
+        for (int i = 0; i < m; i++) {
+            data.d1 = rand() % 10000;
+            data.d2 = 'a' + rand() % 26;
+            if (bst->find_node(data)) {
+                hits++;
+            }
+        }
+        t2 = clock();
+        time = (t2 - t1) / (double)CLOCKS_PER_SEC;
+        std::cout << "Calkowity czas wyszukiwan: " << time << std::endl;
+        std::cout << "Sredni czas wyszukiwan: " << time / n << std::endl;
+        std::cout << "Liczba trafien: " << hits << "\n\n";
+
+
+        std::cout << "=====================================================================\n\n\n\n";
+
+
+
+        bst->delete_all();
+    }
+   
     delete bst;
     system("pause");
 }
